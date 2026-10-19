@@ -8,7 +8,7 @@ Project scope and acceptance criteria are defined in [spec.md](../../spec.md). T
 | --- | --- | --- |
 | Phase 1 — Project Scaffolding & Design System Wiring | [X] Complete | [Phase 1 todo](phase-1-project-scaffolding-design-system-wiring/todo.md) |
 | Phase 2 — Database Schema & Strict RLS Migration | [X] Complete | [Phase 2 todo](phase-2-database-schema-strict-rls-migration/todo.md) |
-| Phase 3 — Supabase Authentication Flow | [-] In progress | [Phase 3 todo](phase-3-supabase-authentication-flow/todo.md) |
+| Phase 3 — Supabase Authentication Flow | [X] Complete | [Phase 3 todo](phase-3-supabase-authentication-flow/todo.md) |
 | Phase 4 — Task CRUD & ThunderOne UI | [-] Not started | [Phase 4 todo](phase-4-task-crud-thunderone-ui/todo.md) |
 | Phase 5 — Vercel Deployment, Verification & Handoff | [-] Not started | [Phase 5 todo](phase-5-vercel-deployment-verification-handoff/todo.md) |
 
@@ -51,8 +51,8 @@ Last updated: 2026-10-19
 - `src/features/auth/components/` contains the gate and form; `src/app/page.tsx` composes the feature.
 - The authentication screens follow the linked desktop and mobile Figma frames, using ThunderOne tokens and local copies of the Figma SVG assets.
 - The Core-compatible auth and task routes use a Supabase anon client with the caller JWT. No service-role key is referenced.
-- Live authentication behavior and the Supabase email-confirmation setting remain to be verified before completing Phase 3.
-- Responsive auth refinements now set an explicit device viewport, respect mobile safe areas, and retain 44px touch targets; visual verification of all auth states remains open in the Phase 3 checklist.
+- The user confirmed registration, sign-in, persistence, logout, unauthenticated gating, and desktop/mobile auth-state checks are complete.
+- Responsive auth refinements set an explicit device viewport, respect mobile safe areas, and retain 44px touch targets.
 
 ## Architecture alignment
 
