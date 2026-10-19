@@ -1,6 +1,6 @@
 # Phase 3 — Supabase Authentication Flow
 
-**Status:** Not started
+**Status:** In progress
 **Scope source:** [Project specification](../../../spec.md)
 
 ## 1. Detailed Explanation
@@ -11,14 +11,28 @@ This phase addresses AC-01, AC-02, and AC-03, and supports AC-07 by blocking una
 
 ## 2. To Take Action
 
-- [ ] Implement email/password registration without email verification.
-- [ ] Implement email/password sign-in and user-facing invalid-credential errors.
-- [ ] Implement logout and clear the active session.
-- [ ] Subscribe to Supabase auth state changes and keep the session available after refresh and in a new tab.
-- [ ] Gate task access so unauthenticated users cannot view or manipulate task data.
-- [ ] Use only the browser Supabase client and anon key; do not add service-role credentials to client code.
-- [ ] Connect the existing app view to the authentication gate.
+- [X] Implement email/password registration; the Supabase project must have email confirmation disabled for immediate sessions.
+- [X] Implement email/password sign-in and user-facing invalid-credential errors.
+- [X] Implement logout and clear the active session.
+- [X] Subscribe to Supabase auth state changes and enable persisted sessions across refreshes and tabs.
+- [X] Gate task access so unauthenticated users cannot view or manipulate task data.
+- [X] Use the browser Supabase client with a public anon or publishable key; no service-role credential is used.
+- [X] Connect the app view to the authentication gate.
+- [X] Keep the App Router page thin; keep auth UI in feature components and Supabase Auth operations behind the feature service/provider boundary.
 - [ ] Verify registration, sign-in, persistence, logout, and unauthenticated access behavior.
+- [X] Implement the desktop and mobile auth layouts using the paired Figma frames.
+- [ ] Verify the desktop and mobile layouts for each auth state.
+
+### Implementation evidence
+
+- Follow [the architecture guide](../architecture.md): the route composes the auth feature; feature components use an injected auth service; the provider owns session lifecycle.
+- The shared browser client is in `src/lib/supabase.ts`; it enables session persistence and token refresh and accepts the configured public key name.
+- `src/features/auth/providers/AuthProvider.tsx` restores the session and subscribes to auth-state changes through `AuthService`.
+- `src/features/auth/services/AuthService.ts` wraps sign-up, sign-in, sign-out, and session operations using the injected browser client.
+- `src/features/auth/components/` contains the authentication gate and form; `src/features/auth/index.ts` exposes the feature API.
+- `src/app/page.tsx` only composes the auth provider and gate. The gate blocks the task area until a session exists.
+- The Phase 3 UI matches the referenced desktop and mobile Figma auth frames and uses the local ThunderOne tokens and downloaded Figma SVG assets.
+- TypeScript check and the Impeccable UI detector pass. Interactive Supabase behavior still needs a real-account check.
 
 ### Figma references
 
@@ -37,4 +51,5 @@ Primary criteria: AC-01, AC-02, and AC-03. Authentication gating contributes to 
 
 ## 3. My Concerns / Questions
 
-- **Email confirmation:** Is email confirmation disabled in the practice Supabase project, as required for AC-01? Verify this setting before starting authentication tests.
+- **Email confirmation:** Verify that email confirmation is disabled in the practice Supabase project before confirming AC-01. If Supabase returns no session after sign-up, the UI reports that project setting.
+- **End-to-end check:** Run the sign-up, sign-in, refresh/new-tab persistence, sign-out, and signed-out gating checks against the configured project before marking this phase complete.

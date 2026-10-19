@@ -9,12 +9,15 @@ This final phase deploys the app to Vercel and connects it to the practice Supab
 
 ## 2. To Take Action
 
+- [ ] Follow [the architecture guide](../architecture.md) when documenting the app; show the feature → service/repository → browser client → RLS data flow.
+- [ ] Verify the deployed browser uses only the configured public anon/publishable key and that task access remains protected by PostgreSQL RLS.
+- [ ] Keep deployment and verification aligned with the client-SDK architecture; do not add a task CRUD API proxy or service-role key.
 - [ ] Confirm the repository has a clean, versioned lockfile and setup documentation.
 - [ ] Deploy the app to Vercel and connect it to the practice Supabase project.
 - [ ] Configure the Supabase URL and anon key in the correct Vercel environments; verify no service-role secret is exposed to the browser.
 - [ ] Confirm the production database migration and RLS policies are applied.
 - [ ] Create `docs/AC_VERIFICATION.md` and record evidence for AC-01 through AC-12 against the deployed URL.
-- [ ] Verify desktop and mobile layouts and the Figma-linked states on the production deployment.
+- [ ] Verify both desktop and mobile layouts for every implemented Figma page/state on the production deployment.
 - [ ] Create `docs/HANDOFF.md` with architecture, deployment details, verification results, and reviewer instructions.
 - [ ] Confirm the deployed URL and handoff materials are ready for assignment review.
 

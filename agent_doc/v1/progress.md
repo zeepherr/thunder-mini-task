@@ -8,7 +8,7 @@ Project scope and acceptance criteria are defined in [spec.md](../../spec.md). T
 | --- | --- | --- |
 | Phase 1 — Project Scaffolding & Design System Wiring | [X] Complete | [Phase 1 todo](phase-1-project-scaffolding-design-system-wiring/todo.md) |
 | Phase 2 — Database Schema & Strict RLS Migration | [X] Complete | [Phase 2 todo](phase-2-database-schema-strict-rls-migration/todo.md) |
-| Phase 3 — Supabase Authentication Flow | [-] Not started | [Phase 3 todo](phase-3-supabase-authentication-flow/todo.md) |
+| Phase 3 — Supabase Authentication Flow | [-] In progress | [Phase 3 todo](phase-3-supabase-authentication-flow/todo.md) |
 | Phase 4 — Task CRUD & ThunderOne UI | [-] Not started | [Phase 4 todo](phase-4-task-crud-thunderone-ui/todo.md) |
 | Phase 5 — Vercel Deployment, Verification & Handoff | [-] Not started | [Phase 5 todo](phase-5-vercel-deployment-verification-handoff/todo.md) |
 
@@ -22,6 +22,9 @@ Project scope and acceptance criteria are defined in [spec.md](../../spec.md). T
 
 ## Project guardrails
 
+- Follow [the architecture guide](architecture.md) for feature organization and the route → feature → service/repository → browser client → RLS flow.
+- Use Thunder_Core's `/api/core/v1*` route handlers as the backend API reference only; preserve the direct browser Supabase flow required by `spec.md` unless that spec is explicitly changed.
+- Every Figma page has paired desktop and mobile designs; implementation and verification must cover both.
 - Use the browser Supabase SDK with the anon key. Never expose a service-role key in client code or `NEXT_PUBLIC_` variables.
 - Enforce per-user data isolation with PostgreSQL RLS as specified in `spec.md`.
 - The Figma source has one page, `Page 1`, with 20 desktop and mobile frames. Phase checklists link the frames relevant to their work.
@@ -38,3 +41,13 @@ Last updated: 2026-10-19
 - Account A deleted the temporary test task successfully, and a final query confirmed no matching test row remains.
 - Phase 2 migration and RLS checks are complete.
 - Open questions are tracked in the Phase 2 checklist.
+
+## Phase 3 progress
+
+- Implemented browser Supabase client setup, auth-state restoration and subscription, registration, sign-in, sign-out, invalid-credential feedback, and the signed-out access gate through the auth feature/service flow.
+- `src/features/auth/providers/AuthProvider.tsx` owns session restoration and subscription; `src/features/auth/services/AuthService.ts` wraps auth operations using the injected browser client.
+- `src/features/auth/components/` contains the gate and form; `src/app/page.tsx` composes the feature.
+- The authentication screens follow the linked desktop and mobile Figma frames, using ThunderOne tokens and local copies of the Figma SVG assets.
+- The browser client accepts a public anon key or the newer publishable-key environment variable; no service-role key is referenced.
+- TypeScript check and the Impeccable UI detector pass.
+- Live authentication behavior and the Supabase email-confirmation setting remain to be verified before completing Phase 3.

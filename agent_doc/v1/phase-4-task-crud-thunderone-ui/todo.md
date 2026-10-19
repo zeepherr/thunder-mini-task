@@ -11,6 +11,10 @@ This phase addresses AC-04, AC-05, AC-08, and AC-09, while preserving the RLS ow
 
 ## 2. To Take Action
 
+- [ ] Follow [the architecture guide](../architecture.md): keep the route thin and implement tasks inside `src/features/tasks/`.
+- [ ] Use the flow `components → hooks → task service → task repository → shared browser Supabase client → PostgreSQL RLS`; inject the shared client rather than creating one in each component.
+- [ ] Keep task components in `components/`, stateful data hooks in `hooks/`, business rules in `services/`, queries in `repositories/`, and feature-owned types/validation beside them.
+- [ ] Do not add a service-role client or a Next.js API route just to proxy task CRUD; let the signed-in browser client and RLS enforce owner access.
 - [ ] Implement browser-SDK task read, create, update, and delete operations scoped to the authenticated user and protected by RLS.
 - [ ] Validate non-empty task names in the UI and retain the database constraint from Phase 2.
 - [ ] Support optional task details and the exact statuses `Todo`, `Doing`, and `Done`.
@@ -19,6 +23,8 @@ This phase addresses AC-04, AC-05, AC-08, and AC-09, while preserving the RLS ow
 - [ ] Add loading, empty, and error states with retry behavior.
 - [ ] Add accessible focus styles, keyboard navigation, and meaningful accessible names for icons and controls.
 - [ ] Match the ThunderOne tokens and responsive Figma layouts; resolve the Done-pill color difference noted in Phase 1.
+- [ ] For every Figma page/state, inspect and implement both the desktop and mobile frames as a paired requirement.
+- [ ] Verify task board, forms, dialogs, loading, empty, and error states at both desktop and mobile breakpoints.
 - [ ] Verify task persistence and status transitions across sign-out and sign-in.
 
 ### Figma references
