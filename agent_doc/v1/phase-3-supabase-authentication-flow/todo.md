@@ -2,11 +2,11 @@
 
 **Status:** In progress
 **Scope source:** [Project specification](../../../spec.md)
-**Architecture:** Follow [the adapted architecture guide](../architecture.md); use the shared browser client with public credentials only.
+**Architecture:** Follow [the architecture guide](../architecture.md); auth UI calls the BFF, which calls versioned Core auth routes and manages HttpOnly cookies.
 
 ## 1. Detailed Explanation
 
-This phase implements email and password registration, sign-in, and sign-out with Supabase Auth. Sessions must persist after a browser refresh and when opening a new tab. The app must prevent signed-out users from viewing or changing task data. Browser requests to Supabase must use only the anon key.
+This phase implements email and password registration, sign-in, and sign-out through `/api/auth/*` BFF routes and `/api/core/v1/auth/*` handlers. Sessions persist through HttpOnly cookies after refresh and in new tabs. The app must prevent signed-out users from viewing or changing task data. The server uses only Supabase's anon key, paired with the user's JWT; no service-role key is allowed.
 
 This phase addresses AC-01, AC-02, and AC-03, and supports AC-07 by blocking unauthenticated access.
 
@@ -15,11 +15,11 @@ This phase addresses AC-01, AC-02, and AC-03, and supports AC-07 by blocking una
 - [X] Implement email/password registration; the Supabase project must have email confirmation disabled for immediate sessions.
 - [X] Implement email/password sign-in and user-facing invalid-credential errors.
 - [X] Implement logout and clear the active session.
-- [X] Subscribe to Supabase auth state changes and enable persisted sessions across refreshes and tabs.
+- [X] Restore the session through the BFF on mount/focus and persist it using HttpOnly access/refresh cookies across refreshes and tabs.
 - [X] Gate task access so unauthenticated users cannot view or manipulate task data.
-- [X] Use the browser Supabase client with a public anon or publishable key; no service-role credential is used.
+- [X] Keep auth tokens out of browser JavaScript and use the server-side Supabase anon client; no service-role credential is used.
 - [X] Connect the app view to the authentication gate.
-- [X] Keep the App Router page thin; keep auth UI in feature components and Supabase Auth operations behind the feature service/provider boundary.
+- [X] Keep the App Router page thin; keep auth UI in feature components and BFF-backed auth operations behind the feature service/provider boundary.
 - [ ] Verify registration, sign-in, persistence, logout, and unauthenticated access behavior.
 - [X] Implement the desktop and mobile auth layouts using the paired Figma frames.
 - [X] Set a device-width mobile viewport, account for notched-screen safe areas, and keep auth controls touch-friendly on mobile.
@@ -27,16 +27,16 @@ This phase addresses AC-01, AC-02, and AC-03, and supports AC-07 by blocking una
 
 ### Implementation evidence
 
-- Follow [the architecture guide](../architecture.md): the route composes the auth feature; feature components use an injected auth service; the provider owns session lifecycle.
-- The shared browser client is in `src/lib/supabase.ts`; it enables session persistence and token refresh and accepts the configured public key name.
-- Public browser environment access is centralized in `src/config/env.ts`; no server secret is read by this module.
-- `src/features/auth/providers/AuthProvider.tsx` restores the session and subscribes to auth-state changes through `AuthService`.
-- `src/features/auth/services/AuthService.ts` wraps sign-up, sign-in, sign-out, and session operations using the injected browser client.
+- Follow [the architecture guide](../architecture.md): the route composes the auth feature; feature components call `AuthService`; the provider owns session lifecycle.
+- `src/features/auth/services/AuthService.ts` calls same-origin `/api/auth/*` endpoints. It does not create a browser Supabase client or handle raw tokens.
+- `src/app/api/auth/*` implements BFF routes and HttpOnly cookie lifecycle; those routes call `/api/core/v1/auth/*` through `src/lib/core-api.ts`.
+- `src/app/api/core/v1/auth/*` validates the app key and uses the Supabase anon client for registration, login, refresh, logout, and session validation.
+- `src/config/server-env.ts` centralizes server-only configuration; `src/config/env.ts` exposes only the browser API base URL.
 - `src/features/auth/components/` contains the authentication gate and form; `src/features/auth/index.ts` exposes the feature API.
 - `src/app/page.tsx` only composes the auth provider and gate. The gate blocks the task area until a session exists.
 - The Phase 3 UI matches the referenced desktop and mobile Figma auth frames and uses the local ThunderOne tokens and downloaded Figma SVG assets.
 - `src/app/layout.tsx` enables `viewport-fit=cover`; the responsive styles account for safe-area insets and preserve 44px touch targets for primary mobile controls.
-- TypeScript check and the Impeccable UI detector pass. Interactive Supabase behavior still needs a real-account check.
+- Interactive Supabase behavior still needs a real-account check.
 
 ### Figma references
 

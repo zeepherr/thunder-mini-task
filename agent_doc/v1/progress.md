@@ -14,20 +14,20 @@ Project scope and acceptance criteria are defined in [spec.md](../../spec.md). T
 
 ## Phase 1 completion evidence
 
-- Next.js App Router, Tailwind CSS v4, `@ant-design/icons`, and `@supabase/supabase-js` are configured.
+- Next.js App Router, Tailwind CSS v4, `@ant-design/icons`, `@supabase/supabase-js`, Axios, and Zod are configured.
 - The ThunderOne stylesheet is vendored. Its Manrope font import is loaded before Tailwind so the stylesheet compiles; token declarations are preserved.
-- `.env.example` contains only the browser Supabase URL and anon key placeholders.
+- `.env.example` contains same-origin API routing, server-only Core settings, and Supabase URL/anon key placeholders; no service-role key is used.
 - The development server served the app and compiled stylesheet with HTTP 200 after the CSS import-order fix.
 - Local setup instructions are in `README.md`.
 
 ## Project guardrails
 
-- Follow [the architecture guide](architecture.md) for feature organization and the route → feature → service/repository → browser client → RLS flow.
-- The Obsidian architecture notes confirm this Mini Project exception: keep task access on the browser Supabase SDK with PostgreSQL RLS. ThunderOne's production BFF and Thunder_Core's `/api/core/v1*` are reference patterns only unless `spec.md` is explicitly changed.
-- Follow ThunderOne's feature-first frontend organization and Thunder_Core's route-boundary conventions only if an HTTP API is later approved. Do not copy Core's tenant RBAC, admin client, service-role access, or MFA into this single-user assignment.
-- Public Supabase environment access is centralized in `src/config/env.ts`; only anon/publishable browser credentials are allowed there.
+- Follow [the architecture guide](architecture.md) for feature → service → shared transport → Next.js BFF → `/api/core/v1*` → user-JWT Supabase anon client → RLS.
+- Auth tokens stay in HttpOnly cookies. The browser receives only a safe user profile and calls same-origin BFF routes.
+- Server-only settings are centralized in `src/config/server-env.ts`; `src/config/env.ts` contains only the browser API base URL.
+- Do not copy Core's tenant RBAC, admin client, service-role access, or MFA into this single-user assignment.
 - Every Figma page has paired desktop and mobile designs; implementation and verification must cover both.
-- Use the browser Supabase SDK with the anon key. Never expose a service-role key in client code or `NEXT_PUBLIC_` variables.
+- Use the Supabase anon key with the verified caller JWT on the server. Never expose a service-role key or server credentials in client code or `NEXT_PUBLIC_` variables.
 - Enforce per-user data isolation with PostgreSQL RLS as specified in `spec.md`.
 - The Figma source has one page, `Page 1`, with 20 desktop and mobile frames. Phase checklists link the frames relevant to their work.
 
@@ -46,18 +46,18 @@ Last updated: 2026-10-19
 
 ## Phase 3 progress
 
-- Implemented browser Supabase client setup, auth-state restoration and subscription, registration, sign-in, sign-out, invalid-credential feedback, and the signed-out access gate through the auth feature/service flow.
-- `src/features/auth/providers/AuthProvider.tsx` owns session restoration and subscription; `src/features/auth/services/AuthService.ts` wraps auth operations using the injected browser client.
+- Implemented server-backed registration, sign-in, sign-out, session restore, refresh, HttpOnly cookies, invalid-credential feedback, and the signed-out access gate through the auth feature/service flow.
+- `src/features/auth/providers/AuthProvider.tsx` owns session restore and refresh checks; `src/features/auth/services/AuthService.ts` calls same-origin `/api/auth/*` routes.
 - `src/features/auth/components/` contains the gate and form; `src/app/page.tsx` composes the feature.
 - The authentication screens follow the linked desktop and mobile Figma frames, using ThunderOne tokens and local copies of the Figma SVG assets.
-- The browser client accepts a public anon key or the newer publishable-key environment variable; no service-role key is referenced.
-- TypeScript check and the Impeccable UI detector pass.
+- The Core-compatible auth and task routes use a Supabase anon client with the caller JWT. No service-role key is referenced.
 - Live authentication behavior and the Supabase email-confirmation setting remain to be verified before completing Phase 3.
-- Public Supabase URL/key lookup is centralized in `src/config/env.ts`, and `src/lib/supabase.ts` creates the shared browser client from that config.
 - Responsive auth refinements now set an explicit device viewport, respect mobile safe areas, and retain 44px touch targets; visual verification of all auth states remains open in the Phase 3 checklist.
 
 ## Architecture alignment
 
 - Reviewed the project-specific Obsidian notes for ThunderOne frontend, Thunder_Core backend, authentication, Supabase/RLS, and the ThunderOne design system.
-- Updated [the architecture guide](architecture.md) to capture reusable conventions and explicitly preserve this assignment's direct browser-Supabase/RLS boundary.
+- Per the user's latest architecture decision, this project now uses the ThunderOne BFF and Thunder_Core `/api/core/v1*` structure as its implementation path, retaining user-JWT RLS and excluding service-role access.
+- Updated [the architecture guide](architecture.md), `spec.md`, README, and the affected phase checklists to describe the same structure.
+- TypeScript check (`npx tsc --noEmit`) passes. Live authentication checks remain open in Phase 3.
 - No files in the Obsidian vault were modified.

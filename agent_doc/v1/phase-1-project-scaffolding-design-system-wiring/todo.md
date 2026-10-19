@@ -2,20 +2,20 @@
 
 **Status:** Complete
 **Scope source:** [Project specification](../../../spec.md)
-**Architecture:** Follow [the adapted architecture guide](../architecture.md); keep browser-safe Supabase environment access limited to public keys.
+**Architecture:** Follow [the architecture guide](../architecture.md); browser code uses the same-origin BFF and Supabase credentials remain server-only.
 
 ## 1. Detailed Explanation
 
-This phase establishes the Next.js App Router foundation and integrates Tailwind CSS v4 with the ThunderOne Design System. It adds the Manrope font, icon and Supabase browser SDK dependencies, and environment variable examples. The app can run locally, providing the foundation for the remaining phases.
+This phase establishes the Next.js App Router foundation and integrates Tailwind CSS v4 with the ThunderOne Design System. It adds the Manrope font, icons, Supabase SDK, Axios, Zod, and environment templates for the BFF/Core route flow. The app can run locally, providing the foundation for the remaining phases.
 
 ## 2. To Take Action
 
 - [x] Set up Next.js App Router and TypeScript.
 - [x] Configure Tailwind CSS v4 and its PostCSS integration.
-- [x] Add `@ant-design/icons` and `@supabase/supabase-js` dependencies with a versioned lockfile.
+- [x] Add `@ant-design/icons`, `@supabase/supabase-js`, Axios, and Zod dependencies with a versioned lockfile.
 - [x] Vendor the ThunderOne Tailwind v4 tokens and use Manrope typography.
 - [x] Hoist the Manrope CSS import before Tailwind output so Next.js can compile the global stylesheet; preserve the design token declarations.
-- [x] Add `.env.example` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` placeholders only.
+- [x] Add `.env.example` for the same-origin API base, Core API URL/key, and server-only Supabase URL/anon key.
 - [x] Document local installation and startup in `README.md`.
 - [x] Confirm the development server and compiled stylesheet return HTTP 200.
 
@@ -32,7 +32,7 @@ The inspected desktop frame uses a 69px header, 16px task-card radius, 12px cont
 
 - Setup files: `package.json`, `package-lock.json`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`, `.env.example`, and `README.md`.
 - App entry points and global styling: `src/app/`.
-- Browser-safe environment lookup: `src/config/env.ts`; it accepts only the Supabase URL and public anon/publishable key.
+- Environment lookup: `src/config/env.ts` contains the public API base URL; `src/config/server-env.ts` contains server-only API and Supabase settings.
 - Vendored design tokens: `src/design-system/t1-tailwind-v4.css`.
 - Startup and CSS delivery verified at `http://localhost:3000` after the import-order fix.
 

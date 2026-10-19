@@ -15,9 +15,10 @@ export function AuthGate() {
         <section className="auth-card setup-card" aria-labelledby="setup-title">
           <h1 id="setup-title">Connect your Supabase project</h1>
           <p>
-            Add <code>NEXT_PUBLIC_SUPABASE_URL</code> and a public anon or
-            publishable key to your local environment, then restart the
-            development server.
+            Add <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code>,
+            <code>CORE_API_URL</code>, and <code>CORE_API_KEY</code> to
+            <code>.env.local</code>, then restart the development server. Keep
+            these values server-side; never use a service-role key.
           </p>
         </section>
       </main>

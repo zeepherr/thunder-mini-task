@@ -2,8 +2,10 @@
 
 **Target Directory:** `D:\Programming\ThunderOne\my-work-list`
 **Design System Reference:** `https://github.com/rdThunderThailand/-thunder-design-system` / [[07 - ThunderOne Design System (thunderone-ui)]] (`t1-tailwind-v4.css`, `DS-01` to `DS-14`)
-**Architecture Standards:** Next.js App Router + Supabase Client SDK + PostgreSQL Row Level Security (RLS) + Vercel Deployment
+**Architecture Standards:** ThunderOne-style Next.js frontend and BFF + Thunder_Core-style `/api/core/v1*` handlers + Supabase Auth/user-scoped anon SDK + PostgreSQL Row Level Security (RLS) + Vercel Deployment
 **Company Assignment Reference:** Ticket #3 / #4: "Mini Project — My Work List" (Due Date: October 23, 2026)
+
+**Environment Configuration:** Browser API base is `NEXT_PUBLIC_API_BASE_URL=/api/proxy`. Server-only settings are `CORE_API_URL`, `CORE_API_KEY`, `SUPABASE_URL`, and `SUPABASE_ANON_KEY`. No service-role key is used.
 
 ---
 
@@ -11,7 +13,7 @@
 
 The goal of this assignment is to develop and deploy an authentic, production-grade personal task management web application (**"My Work List"**) to test the developer's mastery of:
 1. **Next.js (App Router)** & State/Session Management.
-2. **Supabase Authentication & Row Level Security (RLS)** using the browser SDK without exposing backend secrets.
+2. **ThunderOne and Thunder_Core architecture**: feature-first frontend, BFF transport, versioned API handlers, Supabase authentication, and PostgreSQL RLS without exposing server credentials.
 3. **ThunderOne Design System (`thunderone-ui`)** following semantic tokens, platform styling, and accessible async states.
 4. **Vercel Cloud Deployment** with clean environment variable isolation and reproducible verification criteria.
 
@@ -34,7 +36,8 @@ The goal of this assignment is to develop and deploy an authentic, production-gr
 3. **Database Security & Multi-Account Isolation**:
    - PostgreSQL table `public.tasks` with strict Row Level Security (RLS) enabled.
    - RLS policies ensuring Account A cannot read, edit, delete, or reassign Account B's tasks (AC-06).
-   - No `service_role` secret keys in browser bundles or client code.
+   - API data requests use the Supabase anon key with the authenticated user's JWT so PostgreSQL RLS remains active.
+   - No `service_role` secret keys in the application or deployment environment.
 4. **ThunderOne Design System & UX**:
    - `t1-tailwind-v4.css`, Manrope Google Font, and semantic `--t1-*` tokens (`DS-01` to `DS-14`).
    - DS-11 mandatory async states: **Loading**, **Empty State**, and **Error State with retry**.
@@ -56,24 +59,42 @@ The goal of this assignment is to develop and deploy an authentic, production-gr
 
 ## 3. Core Architecture & Security Flow
 
+The project uses the architecture boundaries from `thunder_one_prj` and `Thunder_Core`:
+
+- Frontend features call the shared transport in `src/lib/api/`.
+- Client API requests go to the Next.js BFF at `/api/proxy/[...path]`.
+- The BFF adds the server-only Core API key and the user's access token from the HttpOnly `to_at` cookie, then forwards to `/api/core/v1/*`.
+- `/api/auth/*` owns login, registration, session refresh, and logout cookie lifecycle.
+- Versioned Core handlers validate the app key and user JWT, then use `@supabase/supabase-js` with the anon key plus that user's JWT. Task queries remain subject to PostgreSQL RLS.
+
+For this assignment, the runnable task API is implemented in this repository under `src/app/api/core/v1/`, using Thunder_Core's route, auth, error, and response-envelope conventions. `CORE_API_URL` points to this deployment by default. It can point to a separate compatible Core deployment later; the current Thunder_Core repository has no My Work List task endpoint.
+
 ```mermaid
 sequenceDiagram
     actor User as User Browser
-    participant App as Next.js App (Client Components)
+    participant App as ThunderOne-style Feature UI
+    participant BFF as Next.js BFF (/api/auth/* and /api/proxy/*)
+    participant API as Versioned API (/api/core/v1/*)
     participant Auth as Supabase Auth (/auth/v1)
     participant DB as Supabase PostgreSQL (public.tasks)
 
     Note over User,DB: Registration & Login Flow (No Email Verification)
-    User->>App: Submits Email & Password
-    App->>Auth: supabase.auth.signUp() / signInWithPassword()
-    Auth-->>App: Returns Auth Session + JWT
-    App->>App: Session cached in browser storage / cookies
+    User->>BFF: POST /api/auth/register or /login
+    BFF->>API: POST /api/core/v1/auth/register or /login + x-api-key
+    API->>Auth: Supabase Auth with server-only anon key
+    Auth-->>API: Session + JWT
+    API-->>BFF: Session payload (server-to-server)
+    BFF-->>User: User profile + HttpOnly to_at/to_rt cookies
 
-    Note over User,DB: Task CRUD Operations via Client SDK + RLS
+    Note over User,DB: Task CRUD via BFF, versioned API, user JWT, and RLS
     User->>App: Load Tasks List
-    App->>DB: supabase.from('tasks').select('*') [with Bearer JWT]
+    App->>BFF: GET /api/proxy/tasks
+    BFF->>API: GET /api/core/v1/tasks + x-api-key + Bearer JWT
+    API->>DB: Supabase anon client + user JWT
     DB->>DB: RLS Policy: auth.uid() = user_id
-    DB-->>App: Returns only User's own tasks (Account A cannot see B)
+    DB-->>API: Returns only User's own tasks (Account A cannot see B)
+    API-->>BFF: Standard { success, data } response
+    BFF-->>App: Typed task payload
     App-->>User: Renders Tasks Grid with ThunderOne Design System
 ```
 
@@ -145,23 +166,23 @@ my-work-list/
 │   │       ├── DeleteConfirmModal.tsx # Confirmation barrier before task deletion
 │   │       └── Toast.tsx            # Semantic notifications
 │   ├── config/
-│   │   └── env.ts                   # NEXT_PUBLIC_SUPABASE_URL and ANON_KEY
+│   │   ├── env.ts                   # Browser-safe API base URL
+│   │   └── server-env.ts            # Server-only Core/Supabase anon settings
 │   ├── design-system/
 │   │   └── t1-tailwind-v4.css       # Vendored ThunderOne tokens and Manrope font
-│   ├── features/
-│   │   ├── auth/
-│   │   │   ├── AuthForm.tsx         # Toggleable Register / Login UI with validation
-│   │   │   └── useAuth.ts           # Session subscriber hook
-│   │   └── tasks/
-│   │       ├── TaskBoard.tsx        # Task list, category filters, and CRUD triggers
-│   │       ├── TaskFormModal.tsx    # Create/Edit Task dialog with validation
-│   │       └── useTasks.ts          # Client SDK data operations with async states
+│   ├── features/                    # Feature-first UI, hooks, and API services
 │   ├── lib/
-│   │   └── supabase.ts              # Browser Supabase client factory (Anon Key only)
+│   │   ├── api/                     # Axios client and requestApi wrapper
+│   │   ├── api-utils.ts             # Core API auth, response, and error helpers
+│   │   └── core-api.ts              # Server-to-server Core API client
+│   ├── utils/supabase/server.ts     # Server anon/user-JWT clients
 │   └── app/
-│       ├── layout.tsx               # Manrope font + Design system globals
-│       ├── globals.css              # Imports t1-tailwind-v4.css + Tailwind v4
-│       └── page.tsx                 # Primary app view (Auth gate -> TaskBoard)
+│       ├── api/auth/                # BFF auth and HttpOnly cookie lifecycle
+│       ├── api/proxy/[...path]/     # BFF feature API proxy
+│       ├── api/core/v1/             # Versioned authenticated API handlers
+│       ├── layout.tsx
+│       ├── globals.css
+│       └── page.tsx
 ├── .env.example                     # Clean template without secrets
 ├── package.json
 ├── tsconfig.json
@@ -174,13 +195,14 @@ my-work-list/
 
 - **Phase 1: Project Scaffolding & Design System Wiring**
   - Scaffold `my-work-list` with Next.js App Router, Tailwind v4, `@ant-design/icons`, `@supabase/supabase-js`.
+- Add Axios for the shared frontend transport and Zod for API input validation.
   - Vendor `t1-tailwind-v4.css`, configure `Manrope` typography and `.env.example`.
 - **Phase 2: Database Schema & Strict RLS Migration**
   - Create `001_create_tasks.sql` with table constraints and 4 atomic RLS policies.
   - Deploy to practice Supabase project and verify RLS isolation with 2 test accounts (Account A vs Account B).
 - **Phase 3: Supabase Authentication Flow (Register, Login, Session)**
-  - Implement `AuthForm.tsx` (email/password without confirmation).
-  - Implement session listener (`onAuthStateChange`) ensuring session persistence on refresh and logout clearing.
+  - Implement email/password auth through `/api/auth/*` BFF routes and `/api/core/v1/auth/*` handlers.
+  - Store access and refresh tokens in HttpOnly cookies; preserve sessions across refresh and tabs without exposing tokens to browser JavaScript.
 - **Phase 4: Task CRUD & ThunderOne UI Implementation**
   - Implement `TaskBoard.tsx`, `TaskFormModal.tsx`, and `DeleteConfirmModal.tsx`.
   - Implement DS-11 states (Loading skeletons, empty state, error retry).
@@ -201,10 +223,10 @@ my-work-list/
 | **AC-03** | Session Persistence | Hard refresh (`Ctrl + F5`) and open new tab; verify session remains intact. |
 | **AC-04** | CRUD & Status Transitions | Create, update title/details, cycle `Todo` $\rightarrow$ `Doing` $\rightarrow$ `Done`, delete task. |
 | **AC-05** | Data Persistence | Logout and log back in; verify all tasks persist in database. |
-| **AC-06** | Database RLS Separation | Create task in Account A. Log into Account B via SDK; verify Account B receives empty array or error if attempting to access Account A's task ID. |
-| **AC-07** | Unauthenticated Blocking | Call Supabase SDK without active session; verify database rejects all operations. |
+| **AC-06** | Database RLS Separation | Create task through Account A's authenticated API flow. Authenticate as Account B and verify B cannot read, edit, delete, or reassign A's task; confirm the API uses B's JWT and RLS remains enabled. |
+| **AC-07** | Unauthenticated Blocking | Call `/api/proxy/tasks` without an auth cookie and call `/api/core/v1/tasks` without a bearer JWT; verify requests are rejected and no task data is returned. |
 | **AC-08** | Validation & Async States | Test blank titles, empty list state, loading skeletons, and network retry. |
 | **AC-09** | Design System Adherence | Verify Manrope typography, `--t1-*` tokens, 12px gaps, and keyboard accessibility. |
 | **AC-10** | Clear README Setup | Reviewer can clone repo and run with their own Supabase keys following README. |
-| **AC-11** | Engineering Explanations | Clear documentation of Auth $\rightarrow$ SDK $\rightarrow$ DB RLS architecture. |
+| **AC-11** | Engineering Explanations | Clear documentation of feature → transport → BFF → `/api/core/v1*` → user-JWT anon SDK → DB RLS architecture. |
 | **AC-12** | Production Vercel Delivery | Verify live deployed URL passes all tests on actual cloud deployment. |

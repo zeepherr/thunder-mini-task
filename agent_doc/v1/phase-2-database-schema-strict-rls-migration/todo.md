@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Scope source:** [Project specification](../../../spec.md)
-**Architecture:** Follow [the adapted architecture guide](../architecture.md); PostgreSQL RLS remains the task-data authorization boundary for browser SDK requests.
+**Architecture:** Follow [the architecture guide](../architecture.md); Core API handlers use the anon key and caller JWT, with PostgreSQL RLS as the task-data authorization boundary.
 
 ## 1. Detailed Explanation
 

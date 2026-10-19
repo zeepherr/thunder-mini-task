@@ -2,21 +2,21 @@
 
 **Status:** Not started
 **Scope source:** [Project specification](../../../spec.md)
-**Architecture:** Follow [the adapted architecture guide](../architecture.md); keep task access in the browser SDK and enforce ownership with PostgreSQL RLS.
+**Architecture:** Follow [the architecture guide](../architecture.md); feature API calls use the ThunderOne transport/BFF and `/api/core/v1/tasks`, with user-JWT PostgreSQL RLS.
 
 ## 1. Detailed Explanation
 
-This phase implements reading, creating, updating, and deleting the signed-in user's tasks through the browser Supabase SDK. Blank titles are rejected in both the UI and database. Search, status filters, status changes, create/edit forms, and delete confirmation follow the Figma design and ThunderOne tokens. The interface also includes loading, empty, and retryable error states, plus keyboard accessibility.
+This phase implements reading, creating, updating, and deleting the signed-in user's tasks through feature services, shared API transport, the Next.js BFF, and versioned Core routes. Core handlers use the Supabase anon key with the verified user's JWT, so PostgreSQL RLS remains active. Blank titles are rejected in both the UI and database. Search, status filters, status changes, create/edit forms, and delete confirmation follow Figma and ThunderOne tokens. The interface also includes loading, empty, and retryable error states, plus keyboard accessibility.
 
 This phase addresses AC-04, AC-05, AC-08, and AC-09, while preserving the RLS owner isolation established in Phase 2.
 
 ## 2. To Take Action
 
 - [ ] Follow [the architecture guide](../architecture.md): keep the route thin and implement tasks inside `src/features/tasks/`.
-- [ ] Use the flow `components → hooks → task service → task repository → shared browser Supabase client → PostgreSQL RLS`; inject the shared client rather than creating one in each component.
+- [ ] Use the flow `components → hooks → task service → requestApi → BFF proxy → /api/core/v1/tasks → user-JWT Supabase anon client → PostgreSQL RLS`.
 - [ ] Keep task components in `components/`, stateful data hooks in `hooks/`, business rules in `services/`, queries in `repositories/`, and feature-owned types/validation beside them.
-- [ ] Do not add a service-role client or a Next.js API route just to proxy task CRUD; let the signed-in browser client and RLS enforce owner access.
-- [ ] Implement browser-SDK task read, create, update, and delete operations scoped to the authenticated user and protected by RLS.
+- [ ] Do not add a service-role client. Keep browser credentials out of the database path; the Core route uses the anon key plus verified JWT and RLS.
+- [ ] Implement task read, create, update, and delete operations in feature services through the BFF and Core API, scoped to the authenticated user and protected by RLS.
 - [ ] Validate non-empty task names in the UI and retain the database constraint from Phase 2.
 - [ ] Support optional task details and the exact statuses `Todo`, `Doing`, and `Done`.
 - [ ] Implement the task board, search, status filters, task cards, and create/edit/delete controls.

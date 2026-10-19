@@ -37,7 +37,9 @@ export function AuthForm({ authService }: { authService: AuthService }) {
       if (mode === "signin") {
         setError("Invalid email or password");
       } else {
-        setError("We couldn’t create your account. Check your details and try again.");
+        setError(
+          "We couldn’t create your account. Check your details and try again.",
+        );
       }
     } finally {
       setIsSubmitting(false);

@@ -8,62 +8,61 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { User } from "@supabase/supabase-js";
-import {
-  getSupabaseBrowserClient,
-  isSupabaseConfigured,
-} from "@/lib/supabase";
 import { AuthService } from "../services/AuthService";
+import type { AuthUser } from "../services/AuthService";
 
 type AuthContextValue = {
   configured: boolean;
   isLoading: boolean;
-  user: User | null;
-  authService: AuthService | null;
+  user: AuthUser | null;
+  authService: AuthService;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const configured = isSupabaseConfigured();
-  const authService = useMemo(
-    () => (configured ? new AuthService(getSupabaseBrowserClient()) : null),
-    [configured],
-  );
+  const [configured, setConfigured] = useState(true);
+  const authService = useMemo(() => new AuthService(), []);
 
   useEffect(() => {
-    if (!authService) {
-      setIsLoading(false);
-      return;
+    let active = true;
+    let isRestoring = false;
+
+    async function restoreSession() {
+      if (isRestoring) return;
+      isRestoring = true;
+      try {
+        const session = await authService.restoreSession();
+        if (!active) return;
+        setConfigured(session.configured);
+        setUser(session.user);
+      } catch {
+        if (!active) return;
+        setConfigured(true);
+        setUser(null);
+      } finally {
+        isRestoring = false;
+        if (active) setIsLoading(false);
+      }
     }
 
-    let active = true;
-    const unsubscribe = authService.subscribe((nextUser) => {
-      if (active) {
-        setUser(nextUser);
-        setIsLoading(false);
-      }
-    });
+    const unsubscribe = authService.subscribe(() => void restoreSession());
+    const handleFocus = () => void restoreSession();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") void restoreSession();
+    };
 
-    void authService
-      .restoreUser()
-      .then((restoredUser) => {
-        if (!active) return;
-        setUser(restoredUser);
-      })
-      .catch(() => {
-        if (!active) return;
-        setUser(null);
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    void restoreSession();
 
     return () => {
       active = false;
       unsubscribe();
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [authService]);
 

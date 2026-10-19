@@ -1,48 +1,106 @@
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+export type AuthUser = {
+  id: string;
+  email?: string | null;
+};
+
+export type AuthSessionState = {
+  configured: boolean;
+  user: AuthUser | null;
+};
+
+type AuthResponse = {
+  configured?: boolean;
+  user?: AuthUser | null;
+  hasActiveSession?: boolean;
+  error?: string;
+};
+
+const AUTH_CHANGE_EVENT = "my-work-list:auth-change";
+const AUTH_CHANGE_STORAGE_KEY = "my-work-list:auth-change";
+
+async function postAuthRoute(path: string, payload?: unknown): Promise<AuthResponse> {
+  const response = await fetch(`/api/auth/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload ?? {}),
+    credentials: "same-origin",
+    cache: "no-store",
+  });
+  const body = (await response.json().catch(() => ({}))) as AuthResponse;
+
+  if (!response.ok) {
+    throw new Error(body.error ?? "Authentication request failed.");
+  }
+
+  return body;
+}
+
+function publishAuthChange() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(AUTH_CHANGE_EVENT));
+  try {
+    window.localStorage.setItem(AUTH_CHANGE_STORAGE_KEY, String(Date.now()));
+    window.localStorage.removeItem(AUTH_CHANGE_STORAGE_KEY);
+  } catch {
+    // The current tab still receives the event when storage is unavailable.
+  }
+}
 
 export class AuthService {
-  constructor(private readonly supabase: SupabaseClient) {}
-
   async signIn(email: string, password: string): Promise<void> {
-    const { error } = await this.supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-
-    if (error) throw error;
+    await postAuthRoute("login", { email: email.trim(), password });
+    publishAuthChange();
   }
 
   async signUp(
     email: string,
     password: string,
   ): Promise<{ hasActiveSession: boolean }> {
-    const { data, error } = await this.supabase.auth.signUp({
+    const result = await postAuthRoute("register", {
       email: email.trim(),
       password,
     });
-
-    if (error) throw error;
-    return { hasActiveSession: data.session !== null };
+    if (result.hasActiveSession) publishAuthChange();
+    return { hasActiveSession: result.hasActiveSession === true };
   }
 
   async signOut(): Promise<void> {
-    const { error } = await this.supabase.auth.signOut();
-    if (error) throw error;
+    await postAuthRoute("logout");
+    publishAuthChange();
   }
 
-  async restoreUser(): Promise<User | null> {
-    const { data, error } = await this.supabase.auth.getSession();
-    if (error) throw error;
-    return data.session?.user ?? null;
-  }
-
-  subscribe(onUserChange: (user: User | null) => void): () => void {
-    const {
-      data: { subscription },
-    } = this.supabase.auth.onAuthStateChange((_event, session) => {
-      onUserChange(session?.user ?? null);
+  async restoreSession(): Promise<AuthSessionState> {
+    const response = await fetch("/api/auth/session", {
+      credentials: "same-origin",
+      cache: "no-store",
     });
+    const body = (await response.json().catch(() => ({}))) as AuthResponse;
 
-    return () => subscription.unsubscribe();
+    if (response.status === 503 && body.configured === false) {
+      return { configured: false, user: null };
+    }
+    if (!response.ok) {
+      throw new Error(body.error ?? "Could not restore your session.");
+    }
+
+    return {
+      configured: body.configured !== false,
+      user: body.user ?? null,
+    };
+  }
+
+  subscribe(onChange: () => void): () => void {
+    if (typeof window === "undefined") return () => undefined;
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === AUTH_CHANGE_STORAGE_KEY) onChange();
+    };
+    window.addEventListener(AUTH_CHANGE_EVENT, onChange);
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener(AUTH_CHANGE_EVENT, onChange);
+      window.removeEventListener("storage", handleStorage);
+    };
   }
 }
