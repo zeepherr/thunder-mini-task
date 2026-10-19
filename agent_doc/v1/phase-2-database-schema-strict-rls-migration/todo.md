@@ -1,7 +1,8 @@
 # Phase 2 — Database Schema & Strict RLS Migration
 
-**Status:** In progress
+**Status:** Complete
 **Scope source:** [Project specification](../../../spec.md)
+**Architecture:** Follow [the adapted architecture guide](../architecture.md); PostgreSQL RLS remains the task-data authorization boundary for browser SDK requests.
 
 ## 1. Detailed Explanation
 

@@ -2,6 +2,7 @@
 
 **Status:** Not started
 **Scope source:** [Project specification](../../../spec.md)
+**Architecture:** Follow [the adapted architecture guide](../architecture.md); keep task access in the browser SDK and enforce ownership with PostgreSQL RLS.
 
 ## 1. Detailed Explanation
 

@@ -2,6 +2,7 @@
 
 **Status:** Complete
 **Scope source:** [Project specification](../../../spec.md)
+**Architecture:** Follow [the adapted architecture guide](../architecture.md); keep browser-safe Supabase environment access limited to public keys.
 
 ## 1. Detailed Explanation
 
@@ -31,6 +32,7 @@ The inspected desktop frame uses a 69px header, 16px task-card radius, 12px cont
 
 - Setup files: `package.json`, `package-lock.json`, `next.config.ts`, `postcss.config.mjs`, `tsconfig.json`, `.env.example`, and `README.md`.
 - App entry points and global styling: `src/app/`.
+- Browser-safe environment lookup: `src/config/env.ts`; it accepts only the Supabase URL and public anon/publishable key.
 - Vendored design tokens: `src/design-system/t1-tailwind-v4.css`.
 - Startup and CSS delivery verified at `http://localhost:3000` after the import-order fix.
 

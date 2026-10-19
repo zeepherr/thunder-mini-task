@@ -1,40 +1,37 @@
 # Architecture and Code Conventions
 
-This guide records the folder and coding patterns to follow for My Work List. Use `Thunder_Core`'s versioned `/api/core/v1*` route handlers as the backend API reference and `thunder_one_prj` for frontend structure and presentation patterns. Apply both within the approved architecture in [the project specification](../../spec.md).
+This guide adapts the architecture notes in the Developer Internship Obsidian project folder to **My Work List**. Follow the approved [project specification](../../spec.md) for application behavior and security boundaries.
 
-## Reference projects
+## Reference architecture
 
-### Backend structure and separation of concerns
+### ThunderOne frontend (`thunder_one_prj`)
 
-For backend conventions, focus on `Thunder_Core/src/app/api/core/v1/**/route.ts` and the shared helpers those route handlers import. Do not use unrelated legacy API versions or infer the target structure from `src/lib/core/` internals.
+Use its conventions that fit this standalone assignment:
 
-- Use the versioned route path shape `src/app/api/core/v1/<resource>/route.ts`; dynamic resources use nested route folders (for example, `[id]/route.ts`).
-- Keep the route handler responsible for the HTTP boundary: parse and validate input, authenticate/authorize the caller, call a cohesive operation, and return a consistent JSON response.
-- Follow the shared response/error wrapper and auth guards used by the v1 routes (such as `apiHandler`, `getApiAuth`, and explicit permission guards) instead of reimplementing them per route.
-- Treat the v1 route's request and response shapes as the frontend API contract. Keep frontend API calls in feature service modules and pass typed results into components.
-- Keep credentials server-side. Thunder_Core's API key, service-role access, tenant role checks, and admin client are specific to Core's server boundary; never place them in browser code.
+- Keep `src/app/` focused on Next.js routes, layouts, global styles, and composition of feature screens.
+- Organize product work by feature under `src/features/<feature>/`.
+- Keep feature UI in `components/`, stateful hooks in `hooks/`, data access and orchestration in `services/` or `repositories/`, and feature-owned types beside the feature.
+- Put shared, domain-neutral controls in `src/components/ui/`, shared app chrome in `src/components/layout/`, shared public environment parsing in `src/config/env.ts`, and shared infrastructure clients in `src/lib/`.
+- Keep feature services as the boundary between components and external data access. Pass typed results into UI components; avoid putting query logic in presentational components.
+- Use typed props, named exports, small cohesive components, and multi-line JSX with one element per line for larger trees.
+- Keep shared styles and design tokens in the existing ThunderOne design system. Do not add another styling system or raw Tailwind color palettes.
 
-Examples reviewed: `Thunder_Core/src/app/api/core/v1/users/route.ts`, `src/lib/api-utils.ts`, and `src/lib/core-api-utils.ts`.
+ThunderOne production uses server components and a BFF proxy to communicate with Thunder_Core. This assignment has an explicit browser-Supabase architecture instead; do not copy the production proxy or session-cookie flow into this app.
 
-### Frontend structure and component style
+### Thunder_Core backend (`/api/core/v1*`)
 
-Use these `thunder_one_prj` patterns as references:
+Treat Thunder_Core as a backend API and database handler. Its canonical human-facing routes are under `src/app/api/core/v1/**/route.ts`; do not copy legacy UI routes or unrelated `/api/v0.1` endpoints.
 
-- Keep `src/app/` focused on routes, layouts, loading/error boundaries, and composing feature screens.
-- Put product workflows in `src/features/<feature>/`; group their UI under `components/`, feature data access under `services/`, and public exports in `index.ts` where useful.
-- Frontend feature services own calls to the feature's data/API boundary; do not put fetch or Supabase query logic into presentational components.
-- Put genuinely reusable controls in `src/components/ui/` and shared chrome in `src/components/layout/`.
-- Use typed component props, named exports, and small components composed into page-level feature views.
-- Format JSX with one element per line and normal multiline indentation when the return tree has more than a couple of elements.
-- Keep theme and shared styles in the existing design system and app styles. Use semantic tokens instead of adding local palette values or a second styling system.
+If a separately approved requirement adds an HTTP API to this project, follow these backend boundary conventions:
 
-Examples reviewed: `thunder_one_prj/AGENTS.md`, `src/features/workspaces/components/WorkspacesPage.tsx`, `src/features/workspaces/services/workspace-stats-api.ts`, `src/features/workspaces/index.ts`, `src/components/ui/Button.tsx`, and `src/app/globals.css`.
+1. Keep the route handler responsible for the HTTP boundary: parse and validate input, authenticate and authorize the caller, invoke one cohesive operation, and return a consistent JSON response.
+2. Use shared request wrappers, error mapping, and auth guards rather than reimplementing them per route.
+3. Keep domain behavior in a cohesive feature service/repository or database operation, not in a large route handler.
+4. Keep server credentials on the server. Never expose a service-role key or backend API secret in browser code or `NEXT_PUBLIC_` variables.
 
-In `thunder_one_prj`, server-side feature services call Thunder_Core's `/api/core/v1*` endpoints through shared API helpers. Use that as the reference for an authorized HTTP API boundary; it does not override this project's separately approved browser-Supabase data path.
+Thunder_Core's app-key gate, tenant membership/RBAC, admin Supabase client, privileged RPC grants, and MFA rules belong to its multi-tenant platform. They are not part of this single-user assignment and must not be copied here.
 
 ## My Work List structure
-
-Keep the current project stack and organize new work around these responsibilities:
 
 ```text
 src/
@@ -43,83 +40,85 @@ src/
 │   ├── page.tsx                 # Composes the auth gate and task feature
 │   └── globals.css
 ├── components/
-│   ├── layout/                  # Shared application shell/header
+│   ├── layout/                  # Shared application shell/header when reused
 │   └── ui/                      # Reusable, domain-neutral UI controls
+├── config/
+│   └── env.ts                   # Browser-safe public Supabase env access only
+├── design-system/               # Vendored ThunderOne stylesheet; do not hand-edit
 ├── features/
 │   ├── auth/
-│   │   ├── components/          # Auth form and authentication gate
-│   │   ├── providers/           # Session state lifecycle
-│   │   ├── services/            # Auth SDK orchestration
+│   │   ├── components/          # Auth form and access gate
+│   │   ├── providers/           # Session restore and subscription lifecycle
+│   │   ├── services/            # Supabase Auth operations
 │   │   └── index.ts             # Feature public exports
-│   └── tasks/                   # Task board, forms, hooks, and task data access
-│       ├── components/
-│       ├── hooks/
-│       ├── repositories/        # Typed Supabase task queries, if separated
-│       ├── services/            # Task rules and orchestration, if needed
+│   └── tasks/
+│       ├── components/          # Board, task cards, forms, confirmation dialog
+│       ├── hooks/               # Feature state and async UI state
+│       ├── repositories/        # Typed Supabase table queries
+│       ├── services/            # Task rules and orchestration when useful
 │       ├── types.ts
-│       └── validation.ts        # Add only if validation is shared or non-trivial
+│       └── validation.ts        # Shared/non-trivial feature validation
 ├── lib/
-│   └── supabase.ts              # Shared browser-client factory
-├── design-system/               # Vendored ThunderOne stylesheet; do not hand-edit
-└── types/                       # Shared types only; feature types stay with features
+│   └── supabase.ts              # Shared browser Supabase client
+└── types/                       # Types shared by multiple features only
 
 supabase/
-├── migrations/                  # Ordered, forward schema/RLS migrations
+├── migrations/                  # Ordered schema, constraints, and RLS migrations
 └── rollback/                    # Matching rollback scripts
 ```
 
-Keep a feature’s private types and helpers beside that feature. Move code to `src/components`, `src/lib`, or `src/types` only when more than one feature needs it.
+Keep private types and helpers beside their feature. Move code into `components/`, `lib/`, or `types/` only when more than one feature needs it. Add a hook, service, or repository when it has a clear responsibility; avoid wrappers that only forward a call.
 
 ## Data flow and security boundary
 
 ```text
-Thunder_Core reference:
-frontend feature service → /api/core/v1 route → shared request auth/validation → Core operation
-
-My Work List (per spec.md):
-route → feature components/hooks → feature service/repository → browser Supabase client
-     → Supabase Auth / PostgreSQL RLS checks auth.uid() against tasks.user_id
+App Router page
+  → feature components
+  → feature hook/service
+  → typed repository / shared Supabase Auth service
+  → singleton browser Supabase client (public anon/publishable key)
+  → Supabase Auth + PostgreSQL RLS
 ```
 
-For this assignment, task CRUD is performed with `@supabase/supabase-js` in the browser. PostgreSQL RLS is the authorization boundary. Do not add a service-role client, server admin client, or a Next.js API route solely to proxy task CRUD. Do not trust client-side ownership checks as a replacement for RLS. Never place a service-role key in client code, `NEXT_PUBLIC_` variables, or committed environment files. If an approved requirement later adds a separate HTTP API, put its handler under `/api/core/v1*` and preserve the public-key/JWT/RLS security model; update `spec.md` before changing the current data flow.
+For task data, PostgreSQL RLS is the authorization boundary. The browser is untrusted: client-side ownership checks improve UX but do not replace RLS. Never add a service-role client, server admin client, or Next.js API route solely to proxy task CRUD. The app's approved requirements intentionally exercise direct browser SDK requests and RLS isolation.
 
-The reference backend's privileged/admin workflows exist for Thunder_Core's multi-tenant operations and must not be copied into this single-user task application. For My Work List, take Core's versioned route boundary and request-handling conventions as reference only; keep key handling and direct-to-Supabase task access governed by `spec.md`.
+The browser client is shared and injected into feature data-access code; do not create one client per component or query. Keep environment access centralized in `src/config/env.ts`, and only read public browser-safe values there. Do not add secret keys to `.env.example`, client code, or committed files.
+
+If a future, explicit requirement changes the data path to an HTTP API, update `spec.md` and this guide first. Place such an API under `/api/core/v1*`, preserve JWT-based user authorization, use a server-only secret where required, and keep feature API calls in feature services. Do not silently infer that change from the ThunderOne production architecture.
 
 ## Implementation conventions
 
-- Keep route files small. Put task behavior in `src/features/tasks/`; use a repository for query composition and a service for business rules when that separation reduces duplication or makes behavior clearer.
-- Keep UI components under the feature's `components/`, stateful hooks under `hooks/`, SDK orchestration under `services/`, and table queries under `repositories/`. The route composes feature exports; it does not implement task behavior.
-- Authentication UI calls the injected `AuthService`; the session provider owns session subscription and restoration. Auth SDK calls stay behind that service/provider boundary.
-- Inject the existing browser Supabase client into data-access functions/classes. Avoid creating a new client per component or query.
-- Give database rows, inputs, and view models explicit TypeScript types. Keep database column names and UI-only fields distinguishable.
-- Check Supabase `{ data, error }` results. Do not silently treat a failed query as an empty task list.
-- Validate and normalize task titles before writing, and retain the matching PostgreSQL constraint as the final data-integrity guard.
-- Keep task status values exactly `Todo`, `Doing`, and `Done`; centralize shared values/types instead of duplicating string literals.
-- Use clear, action-oriented UI error messages. Keep implementation details and raw database errors out of normal user-facing copy.
-- Use the existing ThunderOne design tokens, Manrope setup, Tailwind v4, and current dependencies. Do not introduce another component or CSS framework for a feature.
-- Keep schema changes in a new ordered SQL migration and provide a corresponding rollback script. Do not edit an already-applied migration to represent a new change.
-- Follow this repository's TypeScript/JSX formatting and local project instructions when they are more specific than a reference project's style.
+- Keep App Router files small. A route composes features; it does not implement task behavior.
+- Auth components call the injected `AuthService`; the auth provider owns session restoration and auth-state subscription.
+- Keep task UI under `src/features/tasks/components/`, state in feature hooks, typed table queries in repositories, and business rules in a service when that separation clarifies behavior.
+- Give database rows, input payloads, and UI view models explicit TypeScript types. Keep database column names distinct from UI-only fields.
+- Check Supabase `{ data, error }` results. A failed query must not be shown as an empty task list.
+- Validate and normalize titles before writing; retain PostgreSQL constraints as the final integrity guard.
+- Use exactly `Todo`, `Doing`, and `Done`; centralize status types and values rather than duplicating string literals.
+- Show clear action-oriented UI errors; do not expose raw database or internal server errors to users.
+- Use the existing ThunderOne tokens, Manrope setup, Tailwind v4, and installed dependencies. Do not introduce another component or CSS framework.
+- Keep schema changes in a new ordered SQL migration, paired with a rollback script. Do not edit an already-applied migration to represent a new change.
+- Keep documentation in `agent_doc/v1/` in English. The Obsidian vault is a read-only reference for this task.
 
-### Phase implementation flow
+## Design and responsive requirements
 
-- **Phase 3 (auth):** `src/app/page.tsx` composes the auth provider and gate; auth components call `AuthService`; the provider owns session restore/subscription; `AuthService` receives the shared browser client.
-- **Phase 4 (tasks):** keep board/forms in `src/features/tasks/components/`, task state in feature hooks, business rules in a task service, and typed table queries in a task repository. Flow: component → hook/service → repository → shared browser Supabase client → PostgreSQL RLS.
-- **Phase 5 (delivery):** document and verify the same flow, migration/RLS state, and public-key-only browser configuration. Deployment work must not add a server admin client or move task access behind an unneeded API route.
+- Every Figma page has desktop and mobile designs. Treat both as paired requirements for the same page and state.
+- Before implementing a page, locate both frames in the phase checklist and inspect them together.
+- Implement and verify both responsive layouts and interactions. Mobile is a first-class layout, not a later desktop shrink pass.
+- When a page has loading, empty, error, or dialog states, cover desktop and mobile for each relevant state.
+- Follow ThunderOne design-system rules: semantic tokens, 4px spacing grid, Manrope, accessible focus/contrast, and the required loading/empty/error states for data-driven surfaces.
 
-### Figma desktop and mobile coverage
+## Phase guidance
 
-- Each Figma page has a desktop design and a mobile design. Treat them as paired requirements for the same page/state.
-- Before implementing a page, locate both frames in that phase's checklist and inspect them together.
-- Build and verify both responsive layouts and their interactions; do not treat mobile as an optional later pass or merely shrink the desktop layout.
-- When a Figma page has multiple states (for example, default/error/loading/empty), cover the desktop and mobile pair for every relevant state.
+- **Phase 3 (auth):** `src/app/page.tsx` composes the provider and gate; auth components call `AuthService`; the provider owns session restore/subscription; `AuthService` receives the shared browser client.
+- **Phase 4 (tasks):** use `component → hook/service → repository → shared browser Supabase client → PostgreSQL RLS`; keep the page thin and cover CRUD, async states, validation, and responsive Figma pairs.
+- **Phase 5 (delivery):** document and verify the same browser-SDK/RLS flow, migration state, public-key-only browser configuration, and desktop/mobile behavior. Do not move task access behind an unneeded API route.
 
 ## Source priority
 
-When guidance conflicts, apply it in this order:
-
 1. `spec.md` and explicit user-approved decisions.
-2. This repository's `AGENTS.md` and existing implementation patterns.
-3. This architecture guide's adapted Thunder_Core and thunder_one_prj conventions.
-4. The reference repositories' implementation details.
+2. This repository's `AGENTS.md` and current implementation patterns.
+3. This adapted architecture guide, based on the Obsidian ThunderOne and Thunder_Core notes.
+4. Reference repository details that do not conflict with the first three sources.
 
 The reference repositories are examples, not runtime dependencies. Do not import their code or copy unrelated multi-tenant, admin, or workspace behavior into My Work List.

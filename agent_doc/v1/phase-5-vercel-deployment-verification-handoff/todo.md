@@ -2,6 +2,7 @@
 
 **Status:** Not started
 **Scope source:** [Project specification](../../../spec.md)
+**Architecture:** Follow [the adapted architecture guide](../architecture.md); document the browser SDK → PostgreSQL RLS flow and public-key-only browser config.
 
 ## 1. Detailed Explanation
 

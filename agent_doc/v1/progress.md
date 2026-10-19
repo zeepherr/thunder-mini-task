@@ -23,7 +23,9 @@ Project scope and acceptance criteria are defined in [spec.md](../../spec.md). T
 ## Project guardrails
 
 - Follow [the architecture guide](architecture.md) for feature organization and the route → feature → service/repository → browser client → RLS flow.
-- Use Thunder_Core's `/api/core/v1*` route handlers as the backend API reference only; preserve the direct browser Supabase flow required by `spec.md` unless that spec is explicitly changed.
+- The Obsidian architecture notes confirm this Mini Project exception: keep task access on the browser Supabase SDK with PostgreSQL RLS. ThunderOne's production BFF and Thunder_Core's `/api/core/v1*` are reference patterns only unless `spec.md` is explicitly changed.
+- Follow ThunderOne's feature-first frontend organization and Thunder_Core's route-boundary conventions only if an HTTP API is later approved. Do not copy Core's tenant RBAC, admin client, service-role access, or MFA into this single-user assignment.
+- Public Supabase environment access is centralized in `src/config/env.ts`; only anon/publishable browser credentials are allowed there.
 - Every Figma page has paired desktop and mobile designs; implementation and verification must cover both.
 - Use the browser Supabase SDK with the anon key. Never expose a service-role key in client code or `NEXT_PUBLIC_` variables.
 - Enforce per-user data isolation with PostgreSQL RLS as specified in `spec.md`.
@@ -51,3 +53,11 @@ Last updated: 2026-10-19
 - The browser client accepts a public anon key or the newer publishable-key environment variable; no service-role key is referenced.
 - TypeScript check and the Impeccable UI detector pass.
 - Live authentication behavior and the Supabase email-confirmation setting remain to be verified before completing Phase 3.
+- Public Supabase URL/key lookup is centralized in `src/config/env.ts`, and `src/lib/supabase.ts` creates the shared browser client from that config.
+- Responsive auth refinements now set an explicit device viewport, respect mobile safe areas, and retain 44px touch targets; visual verification of all auth states remains open in the Phase 3 checklist.
+
+## Architecture alignment
+
+- Reviewed the project-specific Obsidian notes for ThunderOne frontend, Thunder_Core backend, authentication, Supabase/RLS, and the ThunderOne design system.
+- Updated [the architecture guide](architecture.md) to capture reusable conventions and explicitly preserve this assignment's direct browser-Supabase/RLS boundary.
+- No files in the Obsidian vault were modified.

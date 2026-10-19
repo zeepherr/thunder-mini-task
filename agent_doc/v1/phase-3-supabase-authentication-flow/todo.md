@@ -2,6 +2,7 @@
 
 **Status:** In progress
 **Scope source:** [Project specification](../../../spec.md)
+**Architecture:** Follow [the adapted architecture guide](../architecture.md); use the shared browser client with public credentials only.
 
 ## 1. Detailed Explanation
 
@@ -21,17 +22,20 @@ This phase addresses AC-01, AC-02, and AC-03, and supports AC-07 by blocking una
 - [X] Keep the App Router page thin; keep auth UI in feature components and Supabase Auth operations behind the feature service/provider boundary.
 - [ ] Verify registration, sign-in, persistence, logout, and unauthenticated access behavior.
 - [X] Implement the desktop and mobile auth layouts using the paired Figma frames.
+- [X] Set a device-width mobile viewport, account for notched-screen safe areas, and keep auth controls touch-friendly on mobile.
 - [ ] Verify the desktop and mobile layouts for each auth state.
 
 ### Implementation evidence
 
 - Follow [the architecture guide](../architecture.md): the route composes the auth feature; feature components use an injected auth service; the provider owns session lifecycle.
 - The shared browser client is in `src/lib/supabase.ts`; it enables session persistence and token refresh and accepts the configured public key name.
+- Public browser environment access is centralized in `src/config/env.ts`; no server secret is read by this module.
 - `src/features/auth/providers/AuthProvider.tsx` restores the session and subscribes to auth-state changes through `AuthService`.
 - `src/features/auth/services/AuthService.ts` wraps sign-up, sign-in, sign-out, and session operations using the injected browser client.
 - `src/features/auth/components/` contains the authentication gate and form; `src/features/auth/index.ts` exposes the feature API.
 - `src/app/page.tsx` only composes the auth provider and gate. The gate blocks the task area until a session exists.
 - The Phase 3 UI matches the referenced desktop and mobile Figma auth frames and uses the local ThunderOne tokens and downloaded Figma SVG assets.
+- `src/app/layout.tsx` enables `viewport-fit=cover`; the responsive styles account for safe-area insets and preserve 44px touch targets for primary mobile controls.
 - TypeScript check and the Impeccable UI detector pass. Interactive Supabase behavior still needs a real-account check.
 
 ### Figma references

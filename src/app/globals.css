@@ -23,7 +23,10 @@
 .auth-layout {
   min-height: 100svh;
   width: 100%;
-  padding: 40px 20px;
+  padding: calc(40px + env(safe-area-inset-top, 0px))
+    max(20px, calc(20px + env(safe-area-inset-right, 0px)))
+    calc(40px + env(safe-area-inset-bottom, 0px))
+    max(20px, calc(20px + env(safe-area-inset-left, 0px)));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -180,10 +183,10 @@
 .password-visibility {
   position: absolute;
   top: 50%;
-  right: 14px;
-  width: 24px;
-  height: 24px;
-  padding: 2px;
+  right: 4px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   display: grid;
   place-items: center;
   transform: translateY(-50%);
@@ -310,7 +313,10 @@
 
 .workspace-header {
   min-height: 69px;
-  padding: 12px clamp(20px, 5vw, 64px);
+  padding: calc(12px + env(safe-area-inset-top, 0px))
+    max(20px, calc(clamp(20px, 5vw, 64px) + env(safe-area-inset-right, 0px)))
+    12px
+    max(20px, calc(clamp(20px, 5vw, 64px) + env(safe-area-inset-left, 0px)));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -351,19 +357,20 @@
 @media (max-width: 600px) {
   .auth-layout {
     justify-content: flex-start;
-    padding: 80px 20px 40px;
+    padding-top: calc(80px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
   }
 
   .auth-layout--signup {
-    padding-top: 48px;
+    padding-top: calc(48px + env(safe-area-inset-top, 0px));
   }
 
   .auth-layout--signin.has-error {
-    padding-top: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
   }
 
   .auth-layout.has-error {
-    padding-top: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
   }
 
   .auth-card {
@@ -375,6 +382,11 @@
   }
 
   .auth-tab {
+    min-height: 44px;
+  }
+
+  .auth-submit,
+  .workspace-signout {
     min-height: 44px;
   }
 
