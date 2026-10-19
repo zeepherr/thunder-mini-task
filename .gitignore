@@ -7,3 +7,4 @@ build/
 !.env.example
 *.tsbuildinfo
 next-env.d.ts
+.mcp.json

@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { apiHandler, ApiError, requireAppKey } from "@/lib/api-utils";
+import { ApiError, apiHandler, requireAppKey } from "@/lib/api-utils";
 import { createAnonClient } from "@/utils/supabase/server";
+import { z } from "zod";
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -10,7 +10,9 @@ const loginSchema = z.object({
 export async function POST(request: Request) {
   return apiHandler(async () => {
     await requireAppKey(request);
-    const parsed = loginSchema.safeParse(await request.json().catch(() => null));
+    const parsed = loginSchema.safeParse(
+      await request.json().catch(() => null),
+    );
     if (!parsed.success) throw new ApiError("Invalid email or password.", 400);
 
     const supabase = createAnonClient();

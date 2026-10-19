@@ -1,18 +1,23 @@
-import { z } from "zod";
-import { apiHandler, ApiError, requireAppKey } from "@/lib/api-utils";
+import { ApiError, apiHandler, requireAppKey } from "@/lib/api-utils";
 import { createAnonClient } from "@/utils/supabase/server";
+import { z } from "zod";
 
 const registerSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(8),
+  password: z.string().min(4),
 });
 
 export async function POST(request: Request) {
   return apiHandler(async () => {
     await requireAppKey(request);
-    const parsed = registerSchema.safeParse(await request.json().catch(() => null));
+    const parsed = registerSchema.safeParse(
+      await request.json().catch(() => null),
+    );
     if (!parsed.success) {
-      throw new ApiError("Enter a valid email and a password with at least 8 characters.", 400);
+      throw new ApiError(
+        "Enter a valid email and a password with at least 4 characters.",
+        400,
+      );
     }
 
     const supabase = createAnonClient();
@@ -22,7 +27,9 @@ export async function POST(request: Request) {
         error.code === "user_already_exists" ||
         error.message.toLowerCase().includes("already registered");
       throw new ApiError(
-        isDuplicate ? "An account with this email already exists." : "Could not create your account.",
+        isDuplicate
+          ? "An account with this email already exists."
+          : "Could not create your account.",
         isDuplicate ? 409 : 400,
       );
     }
@@ -36,7 +43,9 @@ export async function POST(request: Request) {
             expires_at: data.session.expires_at ?? null,
           }
         : null,
-      user: data.user ? { id: data.user.id, email: data.user.email ?? null } : null,
+      user: data.user
+        ? { id: data.user.id, email: data.user.email ?? null }
+        : null,
     };
   }, 201);
 }
