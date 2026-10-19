@@ -1,0 +1,20 @@
+@import "tailwindcss";
+@import "../design-system/t1-tailwind-v4.css";
+
+@layer base {
+  body {
+    font-size: 14px;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
