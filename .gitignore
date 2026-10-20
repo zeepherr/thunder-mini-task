@@ -8,5 +8,5 @@ build/
 *.tsbuildinfo
 next-env.d.ts
 .mcp.json
-agent_doc
+agent_doc/
 spec.md
