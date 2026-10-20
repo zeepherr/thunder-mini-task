@@ -51,15 +51,93 @@ Feature UI → shared Axios transport → Next.js BFF → /api/core/v1/*
 
 Auth tokens are stored in HttpOnly cookies. No service-role key is used. The Core-compatible routes are in this repository because the referenced Thunder_Core project does not provide My Work List task endpoints. This architecture difference is material: the current code does **not** meet the brief’s direct browser-Supabase SDK requirement as written. Confirm the accepted architecture with the Mentor/Assignor before treating the implementation as assignment-compliant. This README documents the current code path; it does not claim the two designs are equivalent.
 
+## Phase 4 implementation guide
+
+Phase 4 implements the task board and its CRUD flow. The app has one page route, `/`; the sign-in/register form and task board are views rendered on that route. The create, edit, and delete dialogs are components, not separate pages.
+
+### 1. Next.js page and authentication flow
+
+1. [`src/app/layout.tsx`](src/app/layout.tsx) provides the root HTML document, metadata, viewport, and global app styling.
+2. [`src/app/page.tsx`](src/app/page.tsx) is the `/` route. It composes `AuthProvider`, `AuthGate`, and `TaskBoard`. The page entry itself is a Server Component; the provider and interactive feature components are client-side boundaries.
+3. [`AuthProvider`](src/features/auth/providers/AuthProvider.tsx) owns the browser's current auth state. On mount, it asks `AuthService` to restore the session, subscribes to auth changes, and updates the context. It also listens for cross-tab/session changes and avoids setting state after unmount.
+4. [`AuthGate`](src/features/auth/components/AuthGate.tsx) chooses the view from that state: setup guidance when required config is missing, a loading view while session restoration is in progress, the auth form when there is no user, or the task board for a signed-in user.
+5. [`AuthService`](src/features/auth/services/AuthService.ts) calls same-origin Next.js auth endpoints with credentials included. The browser does not read the HttpOnly auth cookies itself.
+
+If session restoration fails, the provider currently falls back to a signed-out state so the auth form is shown. There is no separate session-restoration error page.
+
+### 2. Task board and UI state flow
+
+[`TaskBoard`](src/features/tasks/components/TaskBoard.tsx) coordinates the signed-in task experience. It gets task data from [`useTasks`](src/features/tasks/hooks/useTasks.ts), calculates status counts, and derives search/filter results with `useMemo`. Search and status filters are client-side operations over the tasks already loaded; they do not send a new database query.
+
+[`TaskList`](src/features/tasks/components/TaskList.tsx) selects a state in this order:
+
+1. **Loading:** [`TaskListStates`](src/features/tasks/components/TaskListStates.tsx) shows skeleton cards while the initial request is pending.
+2. **Load error:** show an error and a retry action if the initial fetch fails.
+3. **No tasks:** show the create-first-task empty state when the database returned no tasks.
+4. **No matches:** show a separate message and clear-filter action when tasks exist but the current search/filter hides them all.
+5. **Task cards:** render the visible tasks when results exist.
+
+The toolbar also has a loading skeleton. Create and edit use [`TaskFormDialog`](src/features/tasks/components/TaskFormDialog.tsx), which trims and rejects a blank title. Delete uses [`DeleteTaskDialog`](src/features/tasks/components/DeleteTaskDialog.tsx) for confirmation. Status changes use [`TaskStatusSelect`](src/features/tasks/components/TaskStatusSelect.tsx), built with Radix Select. Each mutation disables the relevant control while pending and reports errors in the relevant dialog or board.
+
+### 3. CRUD request path through Next.js
+
+Task components call `TaskService`; it calls the shared Axios transport in [`request-api.ts`](src/lib/api/request-api.ts). The browser base URL defaults to `/api/proxy`, so a task request stays same-origin and enters the Next.js BFF at `/api/proxy/tasks`.
+
+The catch-all route [`src/app/api/proxy/[...path]/route.ts`](src/app/api/proxy/%5B...path%5D/route.ts) restricts the forwarded path to the supported task API, checks the request origin, reads the access token from the HttpOnly cookie, and adds the server-side app key and user Bearer token. It forwards the request to `CORE_API_URL` under `/api/core/v1/*`.
+
+In local setup, `.env.example` points `CORE_API_URL` to `http://localhost:3000`. This means the BFF request re-enters the same Next.js server at the distinct `/api/core/v1/tasks` route; it is not a proxy loop. The Core-compatible route is local to this repository because the referenced Thunder_Core project does not currently provide these task endpoints.
+
+The task API routes in [`src/app/api/core/v1/tasks/route.ts`](src/app/api/core/v1/tasks/route.ts) and [`src/app/api/core/v1/tasks/[id]/route.ts`](src/app/api/core/v1/tasks/%5Bid%5D/route.ts) then:
+
+- Check the app key and validate the user's Bearer JWT with Supabase Auth.
+- Validate create/update request bodies with Zod.
+- Read, insert, update, or delete `public.tasks` using a Supabase client carrying the user's JWT.
+- Scope reads and mutations to the authenticated `user_id`; create always sets `user_id` from the verified user, never from the browser payload.
+- Return a consistent success/data envelope; missing or non-owned task IDs resolve as not found.
+
+`requestApi<T>` unwraps that response envelope and turns HTTP/network failures into errors for the feature layer. `useTasks` changes React state only after the server confirms a successful mutation; these CRUD operations are not optimistic. A failed save therefore leaves the previous task data in place.
+
+### 4. Supabase Auth, JWT, and row security
+
+The current code uses Supabase on the server side:
+
+- Login/register/logout/session restoration go through Next.js auth routes and the Supabase Auth API. Login cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` in production.
+- Task requests carry the access token through the HttpOnly cookie to the BFF, then as a Bearer token to the Core-compatible route.
+- The server verifies that token with `supabase.auth.getUser()`. It creates a Supabase client with the anon key and the user's JWT; the service-role key is not used.
+- PostgreSQL RLS in [`supabase/migrations/001_create_tasks.sql`](supabase/migrations/001_create_tasks.sql) enforces owner access with `auth.uid() = user_id` for select, insert, update, and delete. The API's `user_id` filter is useful defense in depth, while RLS remains the database authorization boundary.
+
+The assignment brief's direct-browser-Supabase requirement and this BFF design are different architectures. That acceptance decision remains a Phase 5 prerequisite; changing to direct browser SDK calls would change the auth and data flow, not just a URL.
+
+### 5. TypeScript and validation boundaries
+
+- [`task.types.ts`](src/features/tasks/types/task.types.ts) defines the domain model in camelCase, such as `Task.updatedAt`, plus task input types for create and update.
+- `TASK_STATUSES as const` is the source for the `TaskStatus` literal union, so UI status values remain narrow instead of becoming arbitrary strings. The `TaskFilter` type adds the `All` option.
+- [`taskService.ts`](src/features/tasks/services/taskService.ts) maps the API's snake_case record (`updated_at`) into the UI's camelCase model (`updatedAt`). That conversion makes the API/domain boundary explicit.
+- `requestApi<T>` gives callers a compile-time response type. TypeScript types disappear at runtime, so they do **not** prove incoming JSON is valid. Zod schemas on the server validate untrusted request bodies at runtime.
+- The status list also exists in the server Zod schema and the database check constraint. If statuses change, update all three boundaries together: UI/domain types, API validation, and PostgreSQL constraint.
+
+### Phase 4 learning map
+
+| Concern | Start here | Follow it to |
+| --- | --- | --- |
+| Page composition and session gate | `src/app/page.tsx` | `AuthProvider` → `AuthService` → `AuthGate` |
+| Task UI and states | `TaskBoard.tsx` → `TaskList.tsx` | `useTasks.ts` → `TaskListStates.tsx` |
+| Create, edit, delete, status | `TaskBoard.tsx` | `TaskFormDialog.tsx`, `DeleteTaskDialog.tsx`, `TaskStatusSelect.tsx` |
+| Request/response typing | `taskService.ts` | `request-api.ts` → `src/lib/api/client.ts` |
+| BFF and token forwarding | `src/app/api/proxy/[...path]/route.ts` | `src/app/api/core/v1/tasks/*` → `src/lib/api-utils.ts` |
+| Supabase and owner isolation | `src/utils/supabase/server.ts` | `001_create_tasks.sql` RLS policies |
+
+This guide explains the current implementation; it is not a record that the remaining manual Phase 4 checks have passed.
+
 ## Current project status
 
 - Phase 1 — scaffolding and ThunderOne design system: complete.
 - Phase 2 — task schema and RLS migration: complete; applied to the practice Supabase project and checked with two accounts.
 - Phase 3 — authentication and responsive auth UI: complete, based on the project owner’s confirmation of the live auth and desktop/mobile checks.
-- Phase 4 — task CRUD and task UI: not started.
+- Phase 4 — task CRUD and task UI implementation: complete. The manual responsive UI and cross-session persistence checks below are still pending.
 - Phase 5 — Vercel deployment, final verification, and handoff: not started.
 
-The task API and task database schema exist, but the task-management UI and end-to-end task workflow still need Phase 4 implementation.
+Before Phase 5, finish both pending Phase 4 checks: (1) verify the task board, forms, dialogs, and loading/empty/error states at desktop and mobile breakpoints; and (2) verify task persistence and status transitions across sign-out and sign-in. Also confirm with the Mentor/Assignor whether the BFF architecture is accepted despite the assignment brief's browser-Supabase requirement.
 
 ## Requirements
 
