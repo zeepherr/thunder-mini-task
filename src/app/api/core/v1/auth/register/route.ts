@@ -4,7 +4,7 @@ import { z } from "zod";
 
 const registerSchema = z.object({
   email: z.string().trim().email(),
-  password: z.string().min(4),
+  password: z.string().min(6),
 });
 
 export async function POST(request: Request) {
@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     );
     if (!parsed.success) {
       throw new ApiError(
-        "Enter a valid email and a password with at least 4 characters.",
+        "Enter a valid email and a password with at least 6 characters.",
         400,
       );
     }

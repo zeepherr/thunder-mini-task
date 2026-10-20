@@ -57,7 +57,7 @@ export function AuthCredentialsFields({
             placeholder={isSignIn ? "Enter your password" : "Create a password"}
             value={password}
             onChange={(event) => onPasswordChange(event.target.value)}
-            minLength={4}
+            minLength={6}
             required
           />
           <button
@@ -76,7 +76,7 @@ export function AuthCredentialsFields({
         </div>
         {!isSignIn ? (
           <p className="m-0 text-xs leading-[1.5] text-t1-gray-500">
-            Use at least 8 characters.
+            Use at least 6 characters.
           </p>
         ) : null}
       </div>
