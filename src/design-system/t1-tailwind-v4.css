@@ -1,8 +1,6 @@
 /* ThunderOne — Tailwind v4 theme. Main CSS: @import "tailwindcss"; then import this file.
    GENERATED from skills/thunderone-ui/tokens.json by scripts/build.mjs. Do not edit by hand. */
 
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
-
 :root {
   --background: 210 20% 98%; /* #F9FAFB */
   --foreground: 220.9 39.3% 11%; /* #111827 */
