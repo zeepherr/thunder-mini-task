@@ -10,3 +10,4 @@ next-env.d.ts
 .mcp.json
 agent_doc/
 spec.md
+.archify/
