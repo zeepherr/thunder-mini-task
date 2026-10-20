@@ -1,16 +1,6 @@
-import { z } from "zod";
 import { apiHandler, ApiError, getApiAuth, requireAppKey } from "@/lib/api-utils";
 import { internalError } from "@/lib/core-api-utils";
-
-const taskStatusSchema = z.enum(["Todo", "Doing", "Done"]);
-
-const createTaskSchema = z
-  .object({
-    title: z.string().trim().min(1),
-    details: z.string().optional().default(""),
-    status: taskStatusSchema.optional().default("Todo"),
-  })
-  .strict();
+import { createTaskSchema } from "./schema";
 
 export async function GET(request: Request) {
   return apiHandler(async () => {

@@ -1,16 +1,6 @@
-import { z } from "zod";
 import { apiHandler, ApiError, getApiAuth, requireAppKey } from "@/lib/api-utils";
 import { internalError, requireUuid } from "@/lib/core-api-utils";
-
-const taskStatusSchema = z.enum(["Todo", "Doing", "Done"]);
-const updateTaskSchema = z
-  .object({
-    title: z.string().trim().min(1).optional(),
-    details: z.string().optional(),
-    status: taskStatusSchema.optional(),
-  })
-  .strict()
-  .refine((value) => Object.keys(value).length > 0);
+import { updateTaskSchema } from "../schema";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
