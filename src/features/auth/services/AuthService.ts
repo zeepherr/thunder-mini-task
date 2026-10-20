@@ -1,12 +1,4 @@
-export type AuthUser = {
-  id: string;
-  email?: string | null;
-};
-
-export type AuthSessionState = {
-  configured: boolean;
-  user: AuthUser | null;
-};
+import type { AuthSessionState, AuthUser } from "../types/auth.types";
 
 type AuthResponse = {
   configured?: boolean;

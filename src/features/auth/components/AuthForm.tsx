@@ -1,17 +1,23 @@
 "use client";
 
-import { EyeOutlined } from "@ant-design/icons";
 import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import type { AuthService } from "../services/AuthService";
+import { AuthCredentialsFields } from "./AuthCredentialsFields";
 
 type AuthMode = "signin" | "signup";
+
+const layoutClasses = "flex min-h-svh w-full flex-col items-center justify-center gap-6 bg-background px-5 pb-[calc(40px+env(safe-area-inset-bottom,0px))] pt-[calc(40px+env(safe-area-inset-top,0px))] max-[600px]:justify-start";
+const mobileTopSpacing = {
+  signin: "max-[600px]:pt-[calc(80px+env(safe-area-inset-top,0px))]",
+  signup: "max-[600px]:pt-[calc(48px+env(safe-area-inset-top,0px))]",
+  signinError: "max-[600px]:pt-[calc(24px+env(safe-area-inset-top,0px))]",
+} as const;
 
 export function AuthForm({ authService }: { authService: AuthService }) {
   const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -55,12 +61,10 @@ export function AuthForm({ authService }: { authService: AuthService }) {
   const isSignIn = mode === "signin";
 
   return (
-    <main
-      className={`auth-layout auth-layout--${mode}${error ? " has-error" : ""}`}
-    >
+    <main className={`${layoutClasses} ${isSignIn && error ? mobileTopSpacing.signinError : mobileTopSpacing[mode]}`}>
       {error && isSignIn ? (
         <Image
-          className="auth-error-mark"
+          className="block shrink-0"
           src="/figma-auth/error-mark.svg"
           alt=""
           width={100}
@@ -68,19 +72,19 @@ export function AuthForm({ authService }: { authService: AuthService }) {
           priority
         />
       ) : null}
-      <section className="auth-card" aria-labelledby="auth-title">
-        <header className="auth-header">
-          <div className="auth-brand">
-            <span className="auth-brand-mark" aria-hidden="true">
+      <section className="flex w-full max-w-md flex-col gap-6 rounded-2xl border border-border bg-card p-8 shadow-[0_4px_16px_rgb(17_24_39_/_0.02)] max-[600px]:p-6" aria-labelledby="auth-title">
+        <header className="flex flex-col gap-6">
+          <div className="flex items-center gap-3 text-foreground">
+            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary" aria-hidden="true">
               <Image src="/figma-auth/zap.svg" alt="" width={21} height={21} />
             </span>
-            <span className="auth-brand-name">Thunder / My Work List</span>
+            <span className="text-base font-extrabold leading-6">Thunder / My Work List</span>
           </div>
-          <div className="auth-intro">
-            <h1 id="auth-title">
+          <div>
+            <h1 className="m-0 text-[28px] font-extrabold leading-[1.35] tracking-[-0.025em] text-foreground" id="auth-title">
               {isSignIn ? "Welcome back." : "Make room for progress."}
             </h1>
-            <p>
+            <p className="mt-2 text-sm leading-[1.5] text-t1-gray-500">
               {isSignIn
                 ? "Sign in to pick up where you left off."
                 : "Create your account and bring your tasks together."}
@@ -88,10 +92,10 @@ export function AuthForm({ authService }: { authService: AuthService }) {
           </div>
         </header>
 
-        <div className="auth-tabs" role="tablist" aria-label="Account access">
+        <div className="flex min-h-12 gap-1 rounded-xl bg-secondary p-1" role="tablist" aria-label="Account access">
           <button
             type="button"
-            className={`auth-tab${isSignIn ? " is-active" : ""}`}
+            className={`min-h-10 min-w-0 flex-1 rounded-lg border px-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${isSignIn ? "border-border bg-white text-primary" : "border-transparent bg-transparent text-t1-gray-500"}`}
             role="tab"
             aria-selected={isSignIn}
             onClick={() => changeMode("signin")}
@@ -100,7 +104,7 @@ export function AuthForm({ authService }: { authService: AuthService }) {
           </button>
           <button
             type="button"
-            className={`auth-tab${!isSignIn ? " is-active" : ""}`}
+            className={`min-h-10 min-w-0 flex-1 rounded-lg border px-2 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${!isSignIn ? "border-border bg-white text-primary" : "border-transparent bg-transparent text-t1-gray-500"}`}
             role="tab"
             aria-selected={!isSignIn}
             onClick={() => changeMode("signup")}
@@ -110,7 +114,7 @@ export function AuthForm({ authService }: { authService: AuthService }) {
         </div>
 
         {error ? (
-          <div className="auth-error" role="alert">
+          <div className="flex items-center gap-2.5 rounded-xl bg-t1-red-100 p-3 text-sm font-semibold leading-5 text-t1-red-700" role="alert">
             {isSignIn ? (
               <Image
                 src="/figma-auth/circle-alert.svg"
@@ -123,83 +127,32 @@ export function AuthForm({ authService }: { authService: AuthService }) {
           </div>
         ) : null}
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-field">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
-            {!isSignIn ? (
-              <p className="auth-helper">
-                Use the email you want to sign in with.
-              </p>
-            ) : null}
-          </div>
-
-          <div className="auth-field">
-            <label htmlFor="password">Password</label>
-            <div className="auth-password-wrap">
-              <input
-                id="password"
-                name="password"
-                type={showPassword ? "text" : "password"}
-                autoComplete={isSignIn ? "current-password" : "new-password"}
-                placeholder={
-                  isSignIn ? "Enter your password" : "Create a password"
-                }
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={4}
-                required
-              />
-              <button
-                className="password-visibility"
-                type="button"
-                onClick={() => setShowPassword((visible) => !visible)}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                aria-pressed={showPassword}
-              >
-                {showPassword ? (
-                  <EyeOutlined aria-hidden="true" />
-                ) : (
-                  <Image
-                    src="/figma-auth/eye-off.svg"
-                    alt=""
-                    width={19}
-                    height={19}
-                  />
-                )}
-              </button>
-            </div>
-            {!isSignIn ? (
-              <p className="auth-helper">Use at least 8 characters.</p>
-            ) : null}
-          </div>
+        <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+          <AuthCredentialsFields
+            isSignIn={isSignIn}
+            email={email}
+            password={password}
+            onEmailChange={setEmail}
+            onPasswordChange={setPassword}
+          />
 
           {notice ? (
-            <p className="auth-notice" role="status">
+            <p className="m-0 text-[13px] leading-5 text-t1-red-700" role="status">
               {notice}
             </p>
           ) : null}
 
-          <div className="auth-guidance">
+          <div className="flex items-center gap-2 text-[13px] leading-5 text-t1-gray-500">
             <Image src="/figma-auth/info.svg" alt="" width={16} height={16} />
             <span>No email verification needed</span>
           </div>
 
-          <button className="auth-submit" type="submit" disabled={isSubmitting}>
+          <button className="min-h-11 rounded-xl border border-transparent bg-primary px-4 text-sm font-bold text-primary-foreground transition-colors hover:bg-t1-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-70" type="submit" disabled={isSubmitting}>
             {isSubmitting ? "Please wait…" : isSignIn ? "Sign In" : "Register"}
           </button>
         </form>
       </section>
-      <p className="auth-tagline">Your tasks. Your pace. Your space.</p>
+      <p className="m-0 text-center text-xs leading-5 text-t1-gray-500">Your tasks. Your pace. Your space.</p>
     </main>
   );
 }

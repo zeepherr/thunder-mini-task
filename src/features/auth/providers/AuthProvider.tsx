@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { AuthService } from "../services/AuthService";
-import type { AuthUser } from "../services/AuthService";
+import type { AuthUser } from "../types/auth.types";
 
 type AuthContextValue = {
   configured: boolean;
